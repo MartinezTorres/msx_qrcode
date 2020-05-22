@@ -44,4 +44,4 @@ https://www.qrcode.com/en/about/version.html
 
 ##### Demo in:
 
-out/msx/qr_demo.rom
+`out/msx/qr_demo.rom`
