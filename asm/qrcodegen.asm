@@ -509,8 +509,8 @@ _qr_get8::
 	ld	e, 4 (ix)
 	ld	bc, #_QRCODE+0
 ;src//qr/qrcodegen.c:168: INLINE uint8_t getModule8(const uint8_t qrcode[], uint8_t x, uint8_t y) { return qrcode[y * (QRPAD>>3) + (x>>3)]; }
-	ld	l, d
 	ld	h, #0x00
+	ld	l, d
 	add	hl, hl
 	add	hl, hl
 	srl	e
@@ -545,10 +545,10 @@ _reedSolomonMultiply:
 	add	a, a
 	add	hl, hl
 	jr	NC,00107$
-	ld	e, a
+	ld	d, a
 	rla
 	sbc	a, a
-	ld	a, e
+	ld	a, d
 	xor	a, #0x1d
 	ld	h, a
 	jr	00108$
@@ -846,15 +846,14 @@ _reedSolomonComputeDivisor:
 ;src//qr/qrcodegen.c:292: for (uint8_t j = 0; j < RSDegree; j++) {
 	ld	b, #0x00
 00106$:
-	ld	a, b
-	sub	a, #0x0f
-	jr	NC,00103$
 ;src//qr/qrcodegen.c:293: rsdiv[j] = reedSolomonMultiply(rsdiv[j]);
-	ld	a, #<(_rsdiv)
-	add	a, b
+	ld	a,b
+	cp	a,#0x0f
+	jr	NC,00103$
+	add	a, #<(_rsdiv)
 	ld	e, a
-	ld	a, #>(_rsdiv)
-	adc	a, #0x00
+	ld	a, #0x00
+	adc	a, #>(_rsdiv)
 	ld	d, a
 	ld	a, (de)
 	ld	l, a
@@ -1824,7 +1823,7 @@ _drawWhiteFunctionModules:
 00162$:
 	ld	a, #0x01
 00163$:
-	ld	e, a
+	ld	d, a
 	ld	l, -10 (ix)
 	ld	h, -9 (ix)
 	ld	c, (hl)
@@ -1837,11 +1836,8 @@ _drawWhiteFunctionModules:
 	ld	a, -2 (ix)
 	add	a, c
 	ld	c, a
-	ld	a, e
-	push	af
-	inc	sp
-	push	bc
-	inc	sp
+	ld	e, b
+	push	de
 	ld	a, c
 	push	af
 	inc	sp
@@ -2194,37 +2190,33 @@ _drawFormatBitsCopy1:
 	sub	a, #0x08
 	jr	C,00103$
 ;src//qr/qrcodegen.c:492: b = bits>>8;
-	ld	c, b
-	ld	b, #0x00
 ;src//qr/qrcodegen.c:493: for (i = 8; i < 15; i++) {
-	ld	l, #0x08
+	ld	c, #0x08
 00105$:
 ;src//qr/qrcodegen.c:494: setModuleStatic(QRCODE, 8, QRSIZE - 15 + i, b&1); b>>=1;
-	ld	a, c
+	ld	a, b
 	and	a, #0x01
-	ld	h, a
-	ld	a, l
+	ld	d, a
+	ld	a, c
 	add	a, #0x0e
 	ld	e, a
-	push	hl
 	push	bc
-	push	hl
+	push	de
 	inc	sp
 	ld	d, e
 	ld	e,#0x08
 	push	de
-	ld	de, #_QRCODE
-	push	de
+	ld	hl, #_QRCODE
+	push	hl
 	call	_setModuleStatic
 	pop	af
 	pop	af
 	inc	sp
 	pop	bc
-	pop	hl
-	srl	c
+	srl	b
 ;src//qr/qrcodegen.c:493: for (i = 8; i < 15; i++) {
-	inc	l
-	ld	a, l
+	inc	c
+	ld	a, c
 	sub	a, #0x0f
 	jr	C,00105$
 ;src//qr/qrcodegen.c:496: setModuleStatic(QRCODE, 8, QRSIZE - 8, true);  // Always black
@@ -2250,7 +2242,6 @@ _drawFormatBits:
 	ld	ix,#0
 	add	ix,sp
 	push	af
-	dec	sp
 ;src//qr/qrcodegen.c:502: int data = table[QRECL] << 3 | (int)MASK;  // errCorrLvl is uint2, mask is uint3
 	ld	hl, (#_drawFormatBits_table_65536_304 + 0)
 	add	hl, hl
@@ -2258,27 +2249,28 @@ _drawFormatBits:
 	add	hl, hl
 	ex	(sp), hl
 ;src//qr/qrcodegen.c:503: int rem = data;
-	pop	de
-	push	de
+	ld	l, -2 (ix)
+	ld	d, -1 (ix)
 ;src//qr/qrcodegen.c:504: for (uint8_t i = 0; i < 10; i++)
-	ld	-1 (ix), #0x00
+	ld	e, #0x00
 00103$:
-	ld	a, -1 (ix)
+	ld	a, e
 	sub	a, #0x0a
 	jr	NC,00101$
 ;src//qr/qrcodegen.c:505: rem = (rem << 1) ^ ((rem >> 9) * 0x537);
-	ld	c, e
+	ld	c, l
 	ld	b, d
 	sla	c
 	rl	b
 	ld	a, d
 	sra	a
-	ld	e,a
+	ld	l,a
 	rlc	a
 	sbc	a, a
-	ld	d, a
-	ld	l, e
-	ld	h, d
+	ld	h, a
+	push	de
+	ld	e, l
+	ld	d, h
 	add	hl, hl
 	add	hl, hl
 	add	hl, de
@@ -2295,23 +2287,24 @@ _drawFormatBits:
 	add	hl, de
 	add	hl, hl
 	add	hl, de
-	ld	a, c
-	xor	a, l
-	ld	e, a
-	ld	a, b
-	xor	a, h
+	pop	de
+	ld	a, l
+	xor	a, c
+	ld	l, a
+	ld	a, h
+	xor	a, b
 	ld	d, a
 ;src//qr/qrcodegen.c:504: for (uint8_t i = 0; i < 10; i++)
-	inc	-1 (ix)
+	inc	e
 	jr	00103$
 00101$:
 ;src//qr/qrcodegen.c:506: uint16_t bits = (data << 10 | rem) ^ 0x5412;  // uint15
-	ld	a, -3 (ix)
+	ld	a, -2 (ix)
 	add	a, a
 	add	a, a
 	ld	b, a
 	ld	a, #0x00
-	or	a, e
+	or	a, l
 	ld	c, a
 	ld	a, b
 	or	a, d
@@ -2345,10 +2338,9 @@ _drawCodewordsLR:
 	push	ix
 	ld	ix,#0
 	add	ix,sp
-	push	af
-	push	af
-	push	af
-	push	af
+	ld	iy, #-10
+	add	iy, sp
+	ld	sp, iy
 	ld	c, l
 ;src//qr/qrcodegen.c:520: while (y<QRSIZE) {
 	ld	a, c
@@ -2356,59 +2348,61 @@ _drawCodewordsLR:
 	rrca
 	rrca
 	and	a, #0x1f
-	ld	-6 (ix), a
+	ld	-10 (ix), a
 	ld	a, c
 	add	a, #<(_qr_bitmask)
-	ld	e, a
+	ld	-9 (ix), a
 	ld	a, #0x00
 	adc	a, #>(_qr_bitmask)
-	ld	d, a
-	ld	-1 (ix), #0x00
+	ld	-8 (ix), a
+	ld	e, #0x00
 00105$:
-	ld	a, -1 (ix)
+	ld	a, e
 	sub	a, #0x1d
 	jp	NC, 00114$
 ;src//qr/qrcodegen.c:521: if (!getModule(QRCODE, x, y)) {
 ;src//qr/qrcodegen.c:151: return qrcode[y * (QRPAD>>3) + (x>>3)] & qr_bitmask[x];
-	ld	l, -1 (ix)
+	ld	l, e
 	ld	h, #0x00
 	add	hl, hl
 	add	hl, hl
-	ld	-5 (ix), l
-	ld	-4 (ix), h
-	ld	b, -6 (ix)
-	ld	l, #0x00
-	ld	a, -5 (ix)
-	add	a, b
-	ld	-8 (ix), a
-	ld	a, -4 (ix)
-	adc	a, l
-	ld	-7 (ix), a
-	ld	a, -8 (ix)
-	add	a, #<(_QRCODE)
-	ld	l, a
+	ld	-7 (ix), l
+	ld	-6 (ix), h
+	ld	b, -10 (ix)
+	ld	d, #0x00
 	ld	a, -7 (ix)
-	adc	a, #>(_QRCODE)
+	add	a, b
+	ld	-5 (ix), a
+	ld	a, -6 (ix)
+	adc	a, d
+	ld	-4 (ix), a
+	ld	a, #<(_QRCODE)
+	add	a, -5 (ix)
+	ld	l, a
+	ld	a, #>(_QRCODE)
+	adc	a, -4 (ix)
 	ld	h, a
+	ld	b, (hl)
+	ld	l, -9 (ix)
+	ld	h, -8 (ix)
 	ld	a, (hl)
-	push	af
-	ld	a, (de)
-	ld	b, a
-	pop	af
+	ld	-3 (ix), a
+	ld	a, b
+	and	a, -3 (ix)
 ;src//qr/qrcodegen.c:521: if (!getModule(QRCODE, x, y)) {
-	and	a,b
-	jp	NZ, 00102$
+	or	a, a
+	jr	NZ,00102$
 ;src//qr/qrcodegen.c:522: setModule(QRCODE, x, y, getBit(TMPBUFFER[dc_i >> 3], 7 - (dc_i & 7)));
 	ld	a,(#_dc_i + 0)
 	and	a, #0x07
-	ld	l, a
-	ld	h, #0x00
+	ld	b, a
+	ld	d, #0x00
 	ld	a, #0x07
-	sub	a, l
-	ld	-3 (ix), a
-	ld	a, #0x00
-	sbc	a, h
+	sub	a, b
 	ld	-2 (ix), a
+	ld	a, #0x00
+	sbc	a, d
+	ld	-1 (ix), a
 	ld	hl, (_dc_i)
 	srl	h
 	rr	l
@@ -2423,51 +2417,46 @@ _drawCodewordsLR:
 	ld	l, (hl)
 	ld	h, #0x00
 ;src//qr/qrcodegen.c:146: return ((x >> i) & 1) != 0;
-	ld	a, -3 (ix)
-	inc	a
+	ld	b, -2 (ix)
+	inc	b
 	jr	00138$
 00137$:
 	sra	h
 	rr	l
 00138$:
-	dec	a
-	jr	NZ, 00137$
+	djnz	00137$
 	ld	a, l
 	and	a, #0x01
-	ld	-3 (ix), a
-	ld	-2 (ix), #0x00
-	ld	a, #0x00
-	or	a, -3 (ix)
+	or	a,#0x00
 	sub	a,#0x01
 	ld	a, #0x00
 	rla
 	xor	a, #0x01
-	ld	-3 (ix), a
+	ld	b, a
 ;src//qr/qrcodegen.c:522: setModule(QRCODE, x, y, getBit(TMPBUFFER[dc_i >> 3], 7 - (dc_i & 7)));
 ;src//qr/qrcodegen.c:155: uint8_t v =  qrcode[y * (QRPAD>>3) + (x>>3)];
 	ld	iy, #_QRCODE
 	push	bc
-	ld	c, -8 (ix)
-	ld	b, -7 (ix)
+	ld	c, -5 (ix)
+	ld	b, -4 (ix)
 	add	iy, bc
 	pop	bc
-	ld	a, 0 (iy)
-	ld	-2 (ix), a
+	ld	d, 0 (iy)
 ;src//qr/qrcodegen.c:156: v = (v & ~qr_bitmask[x]) | (((uint8_t)((uint8_t)0)-(!!isBlack)) & qr_bitmask[x]);
-	ld	a, b
-	cpl
-	and	a, -2 (ix)
-	ld	-2 (ix), a
 	ld	a, -3 (ix)
+	cpl
+	and	a, d
+	ld	d, a
+	ld	a, b
 	sub	a,#0x01
 	ld	a, #0x00
 	rla
 	xor	a, #0x01
 	neg
-	and	a, b
 	ld	l, a
-	ld	a, -2 (ix)
-	or	a, l
+	ld	a, -3 (ix)
+	and	a, l
+	or	a,d
 ;src//qr/qrcodegen.c:157: qrcode[y * (QRPAD>>3) + (x>>3)] = v;
 	ld	0 (iy), a
 ;src//qr/qrcodegen.c:523: dc_i++;
@@ -2478,27 +2467,26 @@ _drawCodewordsLR:
 ;src//qr/qrcodegen.c:525: if (!getModule(QRCODE, x-1, y)) {
 	ld	a, c
 	add	a, #0xff
-	ld	-3 (ix), a
+	ld	-2 (ix), a
 ;src//qr/qrcodegen.c:151: return qrcode[y * (QRPAD>>3) + (x>>3)] & qr_bitmask[x];
 	ld	b,a
 	rrca
 	rrca
 	rrca
 	and	a, #0x1f
-	ld	l, a
+	ld	d, a
 	ld	h, #0x00
-	ld	a, l
-	add	a, -5 (ix)
+	ld	a, d
+	add	a, -7 (ix)
 	ld	l, a
 	ld	a, h
-	adc	a, -4 (ix)
+	adc	a, -6 (ix)
 	ld	h, a
 	push	de
 	ld	de, #_QRCODE
 	add	hl, de
 	pop	de
-	ld	a, (hl)
-	ld	-2 (ix), a
+	ld	d, (hl)
 	ld	a, b
 	add	a, #<(_qr_bitmask)
 	ld	l, a
@@ -2506,22 +2494,21 @@ _drawCodewordsLR:
 	adc	a, #>(_qr_bitmask)
 	ld	h, a
 	ld	a, (hl)
-	and	a, -2 (ix)
+	and	a, d
 ;src//qr/qrcodegen.c:525: if (!getModule(QRCODE, x-1, y)) {
-	ld	-2 (ix), a
+	ld	-1 (ix), a
 	or	a, a
 	jp	NZ, 00104$
 ;src//qr/qrcodegen.c:526: setModule(QRCODE, x-1, y, getBit(TMPBUFFER[dc_i >> 3], 7 - (dc_i & 7)));
 	ld	a,(#_dc_i + 0)
 	and	a, #0x07
-	ld	b, a
-	ld	l, #0x00
+	ld	l, a
+	ld	h, #0x00
 	ld	a, #0x07
-	sub	a, b
-	ld	-8 (ix), a
+	sub	a, l
+	ld	b, a
 	ld	a, #0x00
-	sbc	a, l
-	ld	-7 (ix), a
+	sbc	a, h
 	ld	hl, (_dc_i)
 	srl	h
 	rr	l
@@ -2538,7 +2525,6 @@ _drawCodewordsLR:
 	ld	l, (hl)
 	ld	h, #0x00
 ;src//qr/qrcodegen.c:146: return ((x >> i) & 1) != 0;
-	ld	b, -8 (ix)
 	inc	b
 	jr	00140$
 00139$:
@@ -2548,57 +2534,52 @@ _drawCodewordsLR:
 	djnz	00139$
 	ld	a, l
 	and	a, #0x01
-	ld	-8 (ix), a
-	ld	-7 (ix), #0x00
-	ld	a, #0x00
-	or	a, -8 (ix)
+	or	a,#0x00
 	sub	a,#0x01
 	ld	a, #0x00
 	rla
 	xor	a, #0x01
-	ld	-2 (ix), a
+	ld	-1 (ix), a
 ;src//qr/qrcodegen.c:526: setModule(QRCODE, x-1, y, getBit(TMPBUFFER[dc_i >> 3], 7 - (dc_i & 7)));
 	ld	iy, #_QRCODE
-	ld	a, -3 (ix)
+	ld	a, -2 (ix)
 ;src//qr/qrcodegen.c:155: uint8_t v =  qrcode[y * (QRPAD>>3) + (x>>3)];
 	rrca
 	rrca
 	rrca
 	and	a, #0x1f
-	ld	b, a
-	ld	h, #0x00
-	ld	a, -5 (ix)
-	add	a, b
 	ld	l, a
-	ld	a, -4 (ix)
+	ld	h, #0x00
+	ld	a, -7 (ix)
+	add	a, l
+	ld	d, a
+	ld	a, -6 (ix)
 	adc	a, h
 	ld	b, a
 	push	bc
-	ld	c, l
+	ld	c, d
 	add	iy, bc
 	pop	bc
 	ld	b, 0 (iy)
 ;src//qr/qrcodegen.c:156: v = (v & ~qr_bitmask[x]) | (((uint8_t)((uint8_t)0)-(!!isBlack)) & qr_bitmask[x]);
 	ld	a, #<(_qr_bitmask)
-	add	a, -3 (ix)
+	add	a, -2 (ix)
 	ld	l, a
 	ld	a, #>(_qr_bitmask)
 	adc	a, #0x00
 	ld	h, a
-	ld	a, (hl)
-	ld	-3 (ix), a
+	ld	d, (hl)
+	ld	a, d
 	cpl
 	and	a, b
 	ld	b, a
-	ld	a, -2 (ix)
+	ld	a, -1 (ix)
 	sub	a,#0x01
 	ld	a, #0x00
 	rla
 	xor	a, #0x01
 	neg
-	ld	l, a
-	ld	a, -3 (ix)
-	and	a, l
+	and	a, d
 	or	a, b
 ;src//qr/qrcodegen.c:157: qrcode[y * (QRPAD>>3) + (x>>3)] = v;
 	ld	0 (iy), a
@@ -2608,7 +2589,7 @@ _drawCodewordsLR:
 	ld	(_dc_i), hl
 00104$:
 ;src//qr/qrcodegen.c:529: y++;
-	inc	-1 (ix)
+	inc	e
 	jp	00105$
 00114$:
 ;src//qr/qrcodegen.c:531: }
@@ -2623,68 +2604,70 @@ _drawCodewordsRL:
 	push	ix
 	ld	ix,#0
 	add	ix,sp
-	ld	iy, #-10
+	ld	iy, #-9
 	add	iy, sp
 	ld	sp, iy
+	ld	c, l
 ;src//qr/qrcodegen.c:535: while (y) {
-	ld	-2 (ix), l
-	ld	a, l
+	ld	a, c
 	rrca
 	rrca
 	rrca
 	and	a, #0x1f
-	ld	-8 (ix), a
-	ld	a, -2 (ix)
+	ld	-7 (ix), a
+	ld	a, c
 	add	a, #<(_qr_bitmask)
-	ld	e, a
+	ld	-6 (ix), a
 	ld	a, #0x00
 	adc	a, #>(_qr_bitmask)
-	ld	d, a
-	ld	-1 (ix), #0x1d
+	ld	-5 (ix), a
+	ld	b, #0x1d
 00105$:
-	ld	a, -1 (ix)
+	ld	a, b
 	or	a, a
 	jp	Z, 00114$
 ;src//qr/qrcodegen.c:536: y--;
-	dec	-1 (ix)
+	dec	b
 ;src//qr/qrcodegen.c:537: if (!getModule(QRCODE, x, y)) {
-	ld	bc, #_QRCODE
 ;src//qr/qrcodegen.c:151: return qrcode[y * (QRPAD>>3) + (x>>3)] & qr_bitmask[x];
-	ld	l, -1 (ix)
+	ld	l, b
 	ld	h, #0x00
 	add	hl, hl
 	add	hl, hl
-	ld	-7 (ix), l
-	ld	-6 (ix), h
-	ld	l, -8 (ix)
-	ld	h, #0x00
-	ld	a, -7 (ix)
-	add	a, l
-	ld	-10 (ix), a
-	ld	a, -6 (ix)
-	adc	a, h
-	ld	-9 (ix), a
-	pop	hl
-	push	hl
-	add	hl, bc
-	ld	c, (hl)
-	ld	a, (de)
-	ld	-5 (ix), a
-	ld	a, c
-	and	a, -5 (ix)
+	ld	-4 (ix), l
+	ld	-3 (ix), h
+	ld	e, -7 (ix)
+	ld	d, #0x00
+	ld	a, -4 (ix)
+	add	a, e
+	ld	e, a
+	ld	a, -3 (ix)
+	adc	a, d
+	ld	d, a
+	ld	hl, #_QRCODE
+	add	hl, de
+	ld	a, (hl)
+	ld	l, -6 (ix)
+	ld	h, -5 (ix)
+	push	af
+	ld	a, (hl)
+	ld	-2 (ix), a
+	pop	af
+	and	a, -2 (ix)
 ;src//qr/qrcodegen.c:537: if (!getModule(QRCODE, x, y)) {
 	or	a, a
-	jr	NZ,00102$
+	jp	NZ, 00102$
 ;src//qr/qrcodegen.c:538: setModule(QRCODE, x, y, getBit(TMPBUFFER[dc_i >> 3], 7 - (dc_i & 7)));
 	ld	a,(#_dc_i + 0)
 	and	a, #0x07
-	ld	c, a
-	ld	b, #0x00
+	ld	l, a
+	ld	h, #0x00
 	ld	a, #0x07
-	sub	a, c
-	ld	c, a
+	sub	a, l
+	ld	-9 (ix), a
 	ld	a, #0x00
-	sbc	a, b
+	sbc	a, h
+	ld	-8 (ix), a
 	ld	hl, (_dc_i)
 	srl	h
 	rr	l
@@ -2699,78 +2682,77 @@ _drawCodewordsRL:
 	ld	l, (hl)
 	ld	h, #0x00
 ;src//qr/qrcodegen.c:146: return ((x >> i) & 1) != 0;
-	inc	c
+	ld	a, -9 (ix)
+	inc	a
 	jr	00138$
 00137$:
 	sra	h
 	rr	l
 00138$:
-	dec	c
+	dec	a
 	jr	NZ, 00137$
 	ld	a, l
 	and	a, #0x01
-	or	a,#0x00
+	ld	-9 (ix), a
+	ld	-8 (ix), #0x00
+	ld	a, #0x00
+	or	a, -9 (ix)
 	sub	a,#0x01
 	ld	a, #0x00
 	rla
 	xor	a, #0x01
-	ld	-4 (ix), a
+	ld	-1 (ix), a
 ;src//qr/qrcodegen.c:538: setModule(QRCODE, x, y, getBit(TMPBUFFER[dc_i >> 3], 7 - (dc_i & 7)));
 ;src//qr/qrcodegen.c:155: uint8_t v =  qrcode[y * (QRPAD>>3) + (x>>3)];
-	ld	a, #<(_QRCODE)
-	add	a, -10 (ix)
-	ld	c, a
-	ld	a, #>(_QRCODE)
-	adc	a, -9 (ix)
-	ld	b, a
-	ld	a, (bc)
-	ld	-3 (ix), a
+	ld	iy, #_QRCODE
+	add	iy, de
+	ld	e, 0 (iy)
 ;src//qr/qrcodegen.c:156: v = (v & ~qr_bitmask[x]) | (((uint8_t)((uint8_t)0)-(!!isBlack)) & qr_bitmask[x]);
-	ld	a, -5 (ix)
+	ld	a, -2 (ix)
 	cpl
-	and	a, -3 (ix)
-	ld	-3 (ix), a
-	ld	a, -4 (ix)
+	and	a, e
+	ld	e, a
+	ld	a, -1 (ix)
 	sub	a,#0x01
 	ld	a, #0x00
 	rla
 	xor	a, #0x01
 	neg
 	ld	l, a
-	ld	a, -5 (ix)
+	ld	a, -2 (ix)
 	and	a, l
-	ld	l, a
-	ld	a, -3 (ix)
-	or	a, l
+	or	a, e
 ;src//qr/qrcodegen.c:157: qrcode[y * (QRPAD>>3) + (x>>3)] = v;
-	ld	(bc), a
+	ld	0 (iy), a
 ;src//qr/qrcodegen.c:539: dc_i++;
 	ld	hl, (_dc_i)
 	inc	hl
 	ld	(_dc_i), hl
 00102$:
 ;src//qr/qrcodegen.c:541: if (!getModule(QRCODE, x-1, y)) {
-	ld	a, -2 (ix)
+	ld	a, c
 	add	a, #0xff
-	ld	-4 (ix), a
+	ld	-2 (ix), a
 ;src//qr/qrcodegen.c:151: return qrcode[y * (QRPAD>>3) + (x>>3)] & qr_bitmask[x];
-	ld	c,a
+	ld	e,a
 	rrca
 	rrca
 	rrca
 	and	a, #0x1f
+	ld	d, a
 	ld	h, #0x00
-	add	a, -7 (ix)
+	ld	a, d
+	add	a, -4 (ix)
 	ld	l, a
 	ld	a, h
-	adc	a, -6 (ix)
+	adc	a, -3 (ix)
 	ld	h, a
 	push	de
 	ld	de, #_QRCODE
 	add	hl, de
 	pop	de
-	ld	b, (hl)
-	ld	a, c
+	ld	d, (hl)
+	ld	a, e
 	add	a, #<(_qr_bitmask)
 	ld	l, a
 	ld	a, #0x00
@@ -2778,18 +2760,19 @@ _drawCodewordsRL:
 	ld	h, a
 	ld	a, (hl)
 ;src//qr/qrcodegen.c:541: if (!getModule(QRCODE, x-1, y)) {
-	and	a,b
+	and	a,d
 	jp	NZ, 00105$
 ;src//qr/qrcodegen.c:542: setModule(QRCODE, x-1, y, getBit(TMPBUFFER[dc_i >> 3], 7 - (dc_i & 7)));
 	ld	a,(#_dc_i + 0)
 	and	a, #0x07
-	ld	c, a
-	ld	b, #0x00
+	ld	e, a
+	ld	d, #0x00
 	ld	a, #0x07
-	sub	a, c
-	ld	c, a
+	sub	a, e
+	ld	e, a
 	ld	a, #0x00
-	sbc	a, b
+	sbc	a, d
+	ld	d, a
 	ld	hl, (_dc_i)
 	srl	h
 	rr	l
@@ -2804,13 +2787,13 @@ _drawCodewordsRL:
 	ld	l, (hl)
 	ld	h, #0x00
 ;src//qr/qrcodegen.c:146: return ((x >> i) & 1) != 0;
-	inc	c
+	inc	e
 	jr	00140$
 00139$:
 	sra	h
 	rr	l
 00140$:
-	dec	c
+	dec	e
 	jr	NZ, 00139$
 	ld	a, l
 	and	a, #0x01
@@ -2819,52 +2802,45 @@ _drawCodewordsRL:
 	ld	a, #0x00
 	rla
 	xor	a, #0x01
-	ld	-3 (ix), a
+	ld	-1 (ix), a
 ;src//qr/qrcodegen.c:542: setModule(QRCODE, x-1, y, getBit(TMPBUFFER[dc_i >> 3], 7 - (dc_i & 7)));
-	ld	a, -4 (ix)
+	ld	a, -2 (ix)
 ;src//qr/qrcodegen.c:155: uint8_t v =  qrcode[y * (QRPAD>>3) + (x>>3)];
 	rrca
 	rrca
 	rrca
 	and	a, #0x1f
-	ld	c, a
-	ld	b, #0x00
-	ld	l, -7 (ix)
-	ld	h, -6 (ix)
-	add	hl, bc
-	ld	a, l
-	add	a, #<(_QRCODE)
-	ld	-6 (ix), a
-	ld	a, h
-	adc	a, #>(_QRCODE)
-	ld	-5 (ix), a
-	ld	l, -6 (ix)
-	ld	h, -5 (ix)
-	ld	c, (hl)
+	ld	e, a
+	ld	d, #0x00
+	ld	l, -4 (ix)
+	ld	h, -3 (ix)
+	add	hl, de
+	ld	iy, #_QRCODE
+	ex	de,hl
+	add	iy, de
+	ld	e, 0 (iy)
 ;src//qr/qrcodegen.c:156: v = (v & ~qr_bitmask[x]) | (((uint8_t)((uint8_t)0)-(!!isBlack)) & qr_bitmask[x]);
-	ld	a, -4 (ix)
-	add	a, #<(_qr_bitmask)
+	ld	a, #<(_qr_bitmask)
+	add	a, -2 (ix)
 	ld	l, a
-	ld	a, #0x00
-	adc	a, #>(_qr_bitmask)
+	ld	a, #>(_qr_bitmask)
+	adc	a, #0x00
 	ld	h, a
-	ld	b, (hl)
-	ld	a, b
+	ld	d, (hl)
+	ld	a, d
 	cpl
-	and	a, c
-	ld	c, a
-	ld	a, -3 (ix)
+	and	a, e
+	ld	e, a
+	ld	a, -1 (ix)
 	sub	a,#0x01
 	ld	a, #0x00
 	rla
 	xor	a, #0x01
 	neg
-	and	a, b
-	or	a, c
+	and	a, d
+	or	a, e
 ;src//qr/qrcodegen.c:157: qrcode[y * (QRPAD>>3) + (x>>3)] = v;
-	ld	l, -6 (ix)
-	ld	h, -5 (ix)
-	ld	(hl), a
+	ld	0 (iy), a
 ;src//qr/qrcodegen.c:543: dc_i++;
 	ld	hl, (_dc_i)
 	inc	hl
@@ -3019,10 +2995,10 @@ _qrcodegen::
 	add	hl, bc
 	ld	a, (hl)
 	or	a, a
-	jr	Z,00188$
+	jr	Z,00180$
 	inc	e
 	jr	00101$
-00188$:
+00180$:
 	ld	-14 (ix), e
 ;src//qr/qrcodegen.c:624: const uint8_t *data = (const uint8_t *)text;
 	ld	-13 (ix), c
@@ -3030,13 +3006,13 @@ _qrcodegen::
 ;src//qr/qrcodegen.c:628: memset(QRCODE, 0, (size_t)qrcodegen_BUFFER_SZ * sizeof(QRCODE[0]));
 	ld	hl, #_QRCODE
 	ld	b, #0x3a
-00259$:
+00251$:
 	xor	a, a
 	ld	(hl), a
 	inc	hl
 	ld	(hl), a
 	inc	hl
-	djnz	00259$
+	djnz	00251$
 ;src//qr/qrcodegen.c:629: int bitLen = 0;
 	ld	hl, #0x0000
 	ex	(sp), hl
@@ -3051,9 +3027,9 @@ _qrcodegen::
 	ld	-2 (ix), a
 ;src//qr/qrcodegen.c:605: for (int i = numBits - 1; i >= 0; i--, (*bitLen)++)
 	ld	bc, #0x0003
-00148$:
+00140$:
 	bit	7, b
-	jr	NZ,00131$
+	jr	NZ,00123$
 ;src//qr/qrcodegen.c:606: buffer[*bitLen >> 3] |= ((val >> i) & 1) << (7 - (*bitLen & 7));
 	ld	l, -3 (ix)
 	ld	h, -2 (ix)
@@ -3081,13 +3057,13 @@ _qrcodegen::
 	ld	hl, #0x0004
 	pop	af
 	inc	a
-	jr	00262$
-00261$:
+	jr	00254$
+00253$:
 	srl	h
 	rr	l
-00262$:
+00254$:
 	dec	a
-	jr	NZ, 00261$
+	jr	NZ, 00253$
 	ld	a, l
 	and	a, #0x01
 	ld	l, a
@@ -3097,12 +3073,12 @@ _qrcodegen::
 	ld	a, #0x07
 	sub	a, e
 	inc	a
-	jr	00264$
-00263$:
+	jr	00256$
+00255$:
 	sla	l
-00264$:
+00256$:
 	dec	a
-	jr	NZ,00263$
+	jr	NZ,00255$
 	ld	a, l
 	or	a, -1 (ix)
 	ld	0 (iy), a
@@ -3119,9 +3095,9 @@ _qrcodegen::
 	ld	(hl), e
 	inc	hl
 	ld	(hl), d
-	jr	00148$
+	jr	00140$
 ;src//qr/qrcodegen.c:630: appendBitsToBuffer((unsigned int)MODE, 4, QRCODE, &bitLen);
-00131$:
+00123$:
 ;src//qr/qrcodegen.c:631: appendBitsToBuffer((unsigned int)len, numCharCountBits(), QRCODE, &bitLen);
 	ld	c, -11 (ix)
 	ld	b, -10 (ix)
@@ -3132,9 +3108,9 @@ _qrcodegen::
 	ld	-4 (ix), #0x00
 ;src//qr/qrcodegen.c:605: for (int i = numBits - 1; i >= 0; i--, (*bitLen)++)
 	ld	de, #0x0007
-00151$:
+00143$:
 	bit	7, d
-	jr	NZ,00133$
+	jr	NZ,00125$
 ;src//qr/qrcodegen.c:606: buffer[*bitLen >> 3] |= ((val >> i) & 1) << (7 - (*bitLen & 7));
 	ld	a, 0 (iy)
 	ld	-3 (ix), a
@@ -3156,13 +3132,13 @@ _qrcodegen::
 	ld	c, -5 (ix)
 	ld	b, -4 (ix)
 	inc	a
-	jr	00266$
-00265$:
+	jr	00258$
+00257$:
 	srl	b
 	rr	c
-00266$:
+00258$:
 	dec	a
-	jr	NZ, 00265$
+	jr	NZ, 00257$
 	ld	a, c
 	and	a, #0x01
 	ld	c, a
@@ -3172,12 +3148,12 @@ _qrcodegen::
 	ld	a, #0x07
 	sub	a, b
 	inc	a
-	jr	00268$
-00267$:
+	jr	00260$
+00259$:
 	sla	c
-00268$:
+00260$:
 	dec	a
-	jr	NZ,00267$
+	jr	NZ,00259$
 	ld	a, c
 	or	a, -1 (ix)
 	ld	(hl), a
@@ -3188,16 +3164,16 @@ _qrcodegen::
 	inc	bc
 	ld	0 (iy), c
 	ld	1 (iy), b
-	jr	00151$
+	jr	00143$
 ;src//qr/qrcodegen.c:631: appendBitsToBuffer((unsigned int)len, numCharCountBits(), QRCODE, &bitLen);
-00133$:
+00125$:
 ;src//qr/qrcodegen.c:632: for (int j = 0; j < len*8; j++) {
 	ld	a, -11 (ix)
 	ld	-9 (ix), a
 	ld	a, -10 (ix)
 	ld	-8 (ix), a
 	ld	de, #0x0000
-00157$:
+00149$:
 	ld	l, -14 (ix)
 	ld	h, #0x00
 	add	hl, hl
@@ -3207,9 +3183,9 @@ _qrcodegen::
 	sub	a, l
 	ld	a, d
 	sbc	a, h
-	jp	PO, 00269$
+	jp	PO, 00261$
 	xor	a, #0x80
-00269$:
+00261$:
 	jp	P, 00104$
 ;src//qr/qrcodegen.c:633: int bit = (data[j >> 3] >> (7 - (j & 7))) & 1;
 	ld	c, e
@@ -3230,12 +3206,12 @@ _qrcodegen::
 	ld	a, #0x07
 	sub	a, b
 	inc	a
-	jr	00271$
-00270$:
+	jr	00263$
+00262$:
 	srl	c
-00271$:
+00263$:
 	dec	a
-	jr	NZ, 00270$
+	jr	NZ, 00262$
 	ld	a, c
 	and	a, #0x01
 	ld	c, a
@@ -3250,9 +3226,9 @@ _qrcodegen::
 ;src//qr/qrcodegen.c:605: for (int i = numBits - 1; i >= 0; i--, (*bitLen)++)
 	ld	-2 (ix), #0x00
 	ld	-1 (ix), #0x00
-00154$:
+00146$:
 	bit	7, -1 (ix)
-	jr	NZ,00136$
+	jr	NZ,00128$
 ;src//qr/qrcodegen.c:606: buffer[*bitLen >> 3] |= ((val >> i) & 1) << (7 - (*bitLen & 7));
 	ld	l, -7 (ix)
 	ld	h, -6 (ix)
@@ -3279,13 +3255,13 @@ _qrcodegen::
 	ld	l, -5 (ix)
 	ld	h, -4 (ix)
 	inc	a
-	jr	00273$
-00272$:
+	jr	00265$
+00264$:
 	srl	h
 	rr	l
-00273$:
+00265$:
 	dec	a
-	jr	NZ, 00272$
+	jr	NZ, 00264$
 	ld	a, l
 	and	a, #0x01
 	ld	l, a
@@ -3295,12 +3271,12 @@ _qrcodegen::
 	ld	a, #0x07
 	sub	a, c
 	inc	a
-	jr	00275$
-00274$:
+	jr	00267$
+00266$:
 	sla	l
-00275$:
+00267$:
 	dec	a
-	jr	NZ,00274$
+	jr	NZ,00266$
 	ld	a, l
 	or	a, -3 (ix)
 	ld	0 (iy), a
@@ -3321,12 +3297,12 @@ _qrcodegen::
 	ld	(hl), c
 	inc	hl
 	ld	(hl), b
-	jr	00154$
+	jr	00146$
 ;src//qr/qrcodegen.c:634: appendBitsToBuffer((unsigned int)bit, 1, QRCODE, &bitLen);
-00136$:
+00128$:
 ;src//qr/qrcodegen.c:632: for (int j = 0; j < len*8; j++) {
 	inc	de
-	jp	00157$
+	jp	00149$
 00104$:
 ;src//qr/qrcodegen.c:638: appendBitsToBuffer(0, 4, QRCODE, &bitLen);
 	ld	c, -11 (ix)
@@ -3336,9 +3312,9 @@ _qrcodegen::
 ;src//qr/qrcodegen.c:605: for (int i = numBits - 1; i >= 0; i--, (*bitLen)++)
 	ld	-2 (ix), #0x03
 	ld	-1 (ix), #0x00
-00160$:
+00152$:
 	bit	7, -1 (ix)
-	jr	NZ,00138$
+	jr	NZ,00130$
 ;src//qr/qrcodegen.c:606: buffer[*bitLen >> 3] |= ((val >> i) & 1) << (7 - (*bitLen & 7));
 	ld	l, -4 (ix)
 	ld	h, -3 (ix)
@@ -3359,28 +3335,28 @@ _qrcodegen::
 	ld	b, -2 (ix)
 	ld	hl, #0x0000
 	inc	b
-	jr	00277$
-00276$:
+	jr	00269$
+00268$:
 	srl	h
 	rr	l
-00277$:
-	djnz	00276$
+00269$:
+	djnz	00268$
 	ld	a, l
 	and	a, #0x01
-	ld	l, a
+	ld	b, a
 	ld	a, e
 	and	a, #0x07
-	ld	b, a
+	ld	e, a
 	ld	a, #0x07
-	sub	a, b
+	sub	a, e
 	inc	a
-	jr	00279$
-00278$:
-	sla	l
-00279$:
+	jr	00271$
+00270$:
+	sla	b
+00271$:
 	dec	a
-	jr	NZ,00278$
-	ld	a, l
+	jr	NZ,00270$
+	ld	a, b
 	or	a, c
 	ld	0 (iy), a
 ;src//qr/qrcodegen.c:605: for (int i = numBits - 1; i >= 0; i--, (*bitLen)++)
@@ -3400,16 +3376,16 @@ _qrcodegen::
 	ld	(hl), c
 	inc	hl
 	ld	(hl), b
-	jr	00160$
+	jr	00152$
 ;src//qr/qrcodegen.c:638: appendBitsToBuffer(0, 4, QRCODE, &bitLen);
-00138$:
+00130$:
 ;src//qr/qrcodegen.c:643: for (uint8_t padByte = 0xEC; bitLen < dataCapacityBits; padByte ^= 0xEC ^ 0x11)
 	ld	-1 (ix), #0xec
 	ld	a, -11 (ix)
-	ld	-5 (ix), a
+	ld	-3 (ix), a
 	ld	a, -10 (ix)
-	ld	-4 (ix), a
-00166$:
+	ld	-2 (ix), a
+00158$:
 	ld	a, -16 (ix)
 	sub	a, #0xb8
 	ld	a, -15 (ix)
@@ -3419,103 +3395,92 @@ _qrcodegen::
 	sbc	a, #0x81
 	jp	NC, 00106$
 ;src//qr/qrcodegen.c:644: appendBitsToBuffer(padByte, 8, QRCODE, &bitLen);
-	ld	a, -5 (ix)
-	ld	-13 (ix), a
-	ld	a, -4 (ix)
-	ld	-12 (ix), a
-	ld	a, -1 (ix)
-	ld	-11 (ix), a
-	ld	-10 (ix), #0x00
-;src//qr/qrcodegen.c:605: for (int i = numBits - 1; i >= 0; i--, (*bitLen)++)
-	ld	-3 (ix), #0x07
-	ld	-2 (ix), #0x00
-00163$:
-	bit	7, -2 (ix)
-	jp	NZ, 00146$
-;src//qr/qrcodegen.c:606: buffer[*bitLen >> 3] |= ((val >> i) & 1) << (7 - (*bitLen & 7));
-	ld	l, -13 (ix)
-	ld	h, -12 (ix)
-	ld	a, (hl)
-	ld	-9 (ix), a
-	inc	hl
-	ld	a, (hl)
+	ld	a, -3 (ix)
 	ld	-8 (ix), a
-	ld	a, -9 (ix)
+	ld	a, -2 (ix)
 	ld	-7 (ix), a
-	ld	a, -8 (ix)
+	ld	a, -1 (ix)
 	ld	-6 (ix), a
-	sra	-6 (ix)
-	rr	-7 (ix)
-	sra	-6 (ix)
-	rr	-7 (ix)
-	sra	-6 (ix)
-	rr	-7 (ix)
-	ld	a, #<(_QRCODE)
-	add	a, -7 (ix)
-	ld	l, a
-	ld	a, #>(_QRCODE)
-	adc	a, -6 (ix)
-	ld	h, a
-	ld	c, (hl)
-	ld	b, -3 (ix)
-	ld	e, -11 (ix)
-	ld	d, -10 (ix)
-	inc	b
-	jr	00281$
-00280$:
-	srl	d
-	rr	e
-00281$:
-	djnz	00280$
-	ld	a, e
+	ld	-5 (ix), #0x00
+;src//qr/qrcodegen.c:605: for (int i = numBits - 1; i >= 0; i--, (*bitLen)++)
+	ld	bc, #0x0007
+00155$:
+	bit	7, b
+	jr	NZ,00138$
+;src//qr/qrcodegen.c:606: buffer[*bitLen >> 3] |= ((val >> i) & 1) << (7 - (*bitLen & 7));
+	ld	l, -8 (ix)
+	ld	h, -7 (ix)
+	ld	e, (hl)
+	inc	hl
+	ld	d, (hl)
+	ld	l, e
+	ld	h, d
+	sra	h
+	rr	l
+	sra	h
+	rr	l
+	sra	h
+	rr	l
+	ld	iy, #_QRCODE
+	push	bc
+	ld	c, l
+	ld	b, h
+	add	iy, bc
+	pop	bc
+	ld	a, 0 (iy)
+	ld	-4 (ix), a
+	ld	a, c
+	ld	l, -6 (ix)
+	ld	h, -5 (ix)
+	inc	a
+	jr	00273$
+00272$:
+	srl	h
+	rr	l
+00273$:
+	dec	a
+	jr	NZ, 00272$
+	ld	a, l
 	and	a, #0x01
-	ld	b, a
-	ld	a, -9 (ix)
+	ld	l, a
+	ld	a, e
 	and	a, #0x07
 	ld	e, a
 	ld	a, #0x07
 	sub	a, e
 	inc	a
-	jr	00283$
-00282$:
-	sla	b
-00283$:
+	jr	00275$
+00274$:
+	sla	l
+00275$:
 	dec	a
-	jr	NZ,00282$
-	ld	a, b
-	or	a, c
-	ld	(hl), a
+	jr	NZ,00274$
+	ld	a, l
+	or	a, -4 (ix)
+	ld	0 (iy), a
 ;src//qr/qrcodegen.c:605: for (int i = numBits - 1; i >= 0; i--, (*bitLen)++)
-	ld	l, -3 (ix)
-	ld	h, -2 (ix)
-	dec	hl
-	ld	-3 (ix), l
-	ld	-2 (ix), h
-	ld	l, -13 (ix)
-	ld	h, -12 (ix)
-	ld	c, (hl)
+	dec	bc
+	ld	l, -8 (ix)
+	ld	h, -7 (ix)
+	ld	e, (hl)
 	inc	hl
-	ld	b, (hl)
-	inc	bc
-	ld	l, -13 (ix)
-	ld	h, -12 (ix)
-	ld	(hl), c
+	ld	d, (hl)
+	inc	de
+	ld	l, -8 (ix)
+	ld	h, -7 (ix)
+	ld	(hl), e
 	inc	hl
-	ld	(hl), b
-	jp	00163$
+	ld	(hl), d
+	jr	00155$
 ;src//qr/qrcodegen.c:644: appendBitsToBuffer(padByte, 8, QRCODE, &bitLen);
-00146$:
+00138$:
 ;src//qr/qrcodegen.c:643: for (uint8_t padByte = 0xEC; bitLen < dataCapacityBits; padByte ^= 0xEC ^ 0x11)
 	ld	a, -1 (ix)
 	xor	a, #0xfd
 	ld	-1 (ix), a
-	jp	00166$
+	jp	00158$
 ;src//qr/qrcodegen.c:647: debugBorder(BWhite);
 00106$:
-	ld	a, #0x0f
-	out	(_VDP1), a
-	ld	a, #0x87
-	out	(_VDP1), a
 ;src//qr/qrcodegen.c:648: addEccAndInterleave(QRCODE, TMPBUFFER);
 	ld	hl, #_TMPBUFFER
 	push	hl
@@ -3523,39 +3488,18 @@ _qrcodegen::
 	push	hl
 	call	_addEccAndInterleave
 	pop	af
-	pop	af
-;src//qr/qrcodegen.c:649: debugBorder(BLightBlue);
-	ld	a, #0x05
-	out	(_VDP1), a
-	ld	a, #0x87
-	out	(_VDP1), a
 ;src//qr/qrcodegen.c:650: initializeFunctionModules(QRVERSION, QRCODE);
 	ld	hl, #_QRCODE
-	push	hl
+	ex	(sp),hl
 	ld	hl, #0x0003
 	push	hl
 	call	_initializeFunctionModules
 	pop	af
 	pop	af
-;src//qr/qrcodegen.c:651: debugBorder(BLightGreen); //***
-	ld	a, #0x03
-	out	(_VDP1), a
-	ld	a, #0x87
-	out	(_VDP1), a
 ;src//qr/qrcodegen.c:652: drawCodewords();
 	call	_drawCodewords
-;src//qr/qrcodegen.c:653: debugBorder(BLightRed);
-	ld	a, #0x09
-	out	(_VDP1), a
-	ld	a, #0x87
-	out	(_VDP1), a
 ;src//qr/qrcodegen.c:654: drawWhiteFunctionModules();
 	call	_drawWhiteFunctionModules
-;src//qr/qrcodegen.c:655: debugBorder(BLightYellow);
-	ld	a, #0x0b
-	out	(_VDP1), a
-	ld	a, #0x87
-	out	(_VDP1), a
 ;src//qr/qrcodegen.c:656: initializeFunctionModules(QRVERSION, TMPBUFFER);
 	ld	hl, #_TMPBUFFER
 	push	hl
@@ -3564,25 +3508,10 @@ _qrcodegen::
 	call	_initializeFunctionModules
 	pop	af
 	pop	af
-;src//qr/qrcodegen.c:657: debugBorder(BDarkRed); 
-	ld	a, #0x06
-	out	(_VDP1), a
-	ld	a, #0x87
-	out	(_VDP1), a
 ;src//qr/qrcodegen.c:658: applyMask0();
 	call	_applyMask0
-;src//qr/qrcodegen.c:659: debugBorder(BDarkYellow);
-	ld	a, #0x0a
-	out	(_VDP1), a
-	ld	a, #0x87
-	out	(_VDP1), a
 ;src//qr/qrcodegen.c:660: drawFormatBits();
 	call	_drawFormatBits
-;src//qr/qrcodegen.c:661: debugBorder(BBlack);
-	ld	a, #0x01
-	out	(_VDP1), a
-	ld	a, #0x87
-	out	(_VDP1), a
 ;src//qr/qrcodegen.c:663: return QRCODE;
 	ld	hl, #_QRCODE
 ;src//qr/qrcodegen.c:664: }
