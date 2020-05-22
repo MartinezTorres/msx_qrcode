@@ -615,7 +615,7 @@ INLINE void appendBitsToBuffer(unsigned int val, int numBits, uint8_t buffer[], 
 ////////////////////////////////////////////////////////////////////////
 //
 
-uint8_t *qrcodegen(const char *text) {
+uint8_t *qrcodegen(const char *text) __z88dk_fastcall {
     
     
     uint8_t len = 0;
@@ -662,3 +662,14 @@ uint8_t *qrcodegen(const char *text) {
         
     return QRCODE;
 }
+
+bool qr(uint16_t xy) __z88dk_fastcall {
+	uint8_t x = xy>>8;
+	uint8_t y = xy&0xFF;
+	if (!x) return 1;
+	if (!y) return 1;
+	if (x>QRSIZE) return 1;
+	if (y>QRSIZE) return 1;
+	return !qr_get(x-1,y-1);
+}
+

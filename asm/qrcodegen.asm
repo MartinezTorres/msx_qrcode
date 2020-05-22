@@ -13,6 +13,7 @@
 	.globl _qr_get
 	.globl _qr_get8
 	.globl _qrcodegen
+	.globl _qr
 ;--------------------------------------------------------
 ; special function registers
 ;--------------------------------------------------------
@@ -2251,7 +2252,7 @@ _drawFormatBits:
 	push	af
 	dec	sp
 ;src//qr/qrcodegen.c:502: int data = table[QRECL] << 3 | (int)MASK;  // errCorrLvl is uint2, mask is uint3
-	ld	hl, (#_drawFormatBits_table_65536_303 + 0)
+	ld	hl, (#_drawFormatBits_table_65536_304 + 0)
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
@@ -2331,7 +2332,7 @@ _drawFormatBits:
 	ld	sp, ix
 	pop	ix
 	ret
-_drawFormatBits_table_65536_303:
+_drawFormatBits_table_65536_304:
 	.dw #0x0001
 	.dw #0x0000
 	.dw #0x0003
@@ -2997,7 +2998,7 @@ _applyMask0:
 	ld	sp, ix
 	pop	ix
 	ret
-;src//qr/qrcodegen.c:618: uint8_t *qrcodegen(const char *text) {
+;src//qr/qrcodegen.c:618: uint8_t *qrcodegen(const char *text) __z88dk_fastcall {
 ;	---------------------------------
 ; Function qrcodegen
 ; ---------------------------------
@@ -3005,28 +3006,27 @@ _qrcodegen::
 	push	ix
 	ld	ix,#0
 	add	ix,sp
-	ld	hl, #-16
-	add	hl, sp
-	ld	sp, hl
+	ld	iy, #-16
+	add	iy, sp
+	ld	sp, iy
+	ld	c, l
+	ld	b, h
 ;src//qr/qrcodegen.c:622: while (text[len]!=0) len++;
-	ld	c, #0x00
+	ld	e, #0x00
 00101$:
-	ld	l, 4 (ix)
-	ld	h, 5 (ix)
-	ld	b, #0x00
+	ld	l, e
+	ld	h, #0x00
 	add	hl, bc
 	ld	a, (hl)
 	or	a, a
 	jr	Z,00188$
-	inc	c
+	inc	e
 	jr	00101$
 00188$:
-	ld	-14 (ix), c
+	ld	-14 (ix), e
 ;src//qr/qrcodegen.c:624: const uint8_t *data = (const uint8_t *)text;
-	ld	a, 4 (ix)
-	ld	-13 (ix), a
-	ld	a, 5 (ix)
-	ld	-12 (ix), a
+	ld	-13 (ix), c
+	ld	-12 (ix), b
 ;src//qr/qrcodegen.c:628: memset(QRCODE, 0, (size_t)qrcodegen_BUFFER_SZ * sizeof(QRCODE[0]));
 	ld	hl, #_QRCODE
 	ld	b, #0x3a
@@ -3588,6 +3588,57 @@ _qrcodegen::
 ;src//qr/qrcodegen.c:664: }
 	ld	sp, ix
 	pop	ix
+	ret
+;src//qr/qrcodegen.c:666: bool qr(uint16_t xy) __z88dk_fastcall {
+;	---------------------------------
+; Function qr
+; ---------------------------------
+_qr::
+	ld	d, l
+;src//qr/qrcodegen.c:667: uint8_t x = xy>>8;
+	ld	b, h
+;src//qr/qrcodegen.c:668: uint8_t y = xy&0xFF;
+;src//qr/qrcodegen.c:669: if (!x) return 1;
+	ld	a, b
+	or	a, a
+	jr	NZ,00102$
+	ld	l, #0x01
+	ret
+00102$:
+;src//qr/qrcodegen.c:670: if (!y) return 1;
+	ld	a, d
+	or	a, a
+	jr	NZ,00104$
+	ld	l, #0x01
+	ret
+00104$:
+;src//qr/qrcodegen.c:671: if (x>QRSIZE) return 1;
+	ld	a, #0x1d
+	sub	a, b
+	jr	NC,00106$
+	ld	l, #0x01
+	ret
+00106$:
+;src//qr/qrcodegen.c:672: if (y>QRSIZE) return 1;
+	ld	a, #0x1d
+	sub	a, d
+	jr	NC,00108$
+	ld	l, #0x01
+	ret
+00108$:
+;src//qr/qrcodegen.c:673: return !qr_get(x-1,y-1);
+	dec	d
+	dec	b
+	ld	e, b
+	push	de
+	call	_qr_get
+	pop	af
+	ld	a, l
+	sub	a,#0x01
+	ld	a, #0x00
+	rla
+	ld	l, a
+;src//qr/qrcodegen.c:674: }
 	ret
 	.area _CODE
 	.area _INITIALIZER
