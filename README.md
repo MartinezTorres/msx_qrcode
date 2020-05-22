@@ -45,3 +45,6 @@ https://www.qrcode.com/en/about/version.html
 ##### Demo in:
 
 `out/msx/qr_demo.rom`
+
+Can be tested at:
+[DEMO](https://webmsx.org/?ROM=https://github.com/MartinezTorres/msx_qrcode/raw/master/out/msx/qr_demo.rom)
