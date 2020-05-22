@@ -37,3 +37,8 @@ Output   | L is zero if the QR code for the required pixel is black, and non zer
 
 
 Both functions may modify all registers.
+
+##### Information Capacity:
+
+https://www.qrcode.com/en/about/version.html
+
